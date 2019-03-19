@@ -1,160 +1,78 @@
-$(document).ready(function(){
-    //API
-    var _url = "https://my-json-server.typicode.com/dimput/latihan-pwa-public/mahasiswa";
+/*
+* Create Database IndexDB
+*/
 
-    // var _url = "http://localhost:8787/json.php";
-    //Store Data
+createDatabase();
+function createDatabase(){
+    if(!('indexedDB' in window)){
+        console.log('ANDA CUPU !');
+        return;
+    }
+    var request = window.indexedDB.open('latihan-idb',1);
+    request.onerror = handleError;
+    request.onupgradeneeded = (e) => {
+        var db = e.target.result;
+        db.onerror = handleError;
+        console.log('wow');
+        var objectStore = db.createObjectStore('mahasiswa',
+            {keyPath: 'nim'});
+        console.log('Objek Store mahassiwa berhasil dibuat');
+    }
+    request.onsuccess = (e) => {
+        db = e.target.result;
+        db.error = handleError;
+        console.log("Berhasil Melakukan Koneksi ke db Lokal");
+    }
+}
 
-    // menampung data yang didapat dari API
-    var result = '';
+function handleError(e){
+    console.log('error DB : ' + e.target.errorCode);
+}
 
-    // menampung gender sbg option
-    var gender_opt = '';
+var nim = document.getElementById('nim');
+var nama = document.getElementById('nama');
+var gender = document.getElementById('gender');
+var form = document.getElementById('form-tambah');
+var tabel = document.getElementById('tabel-mahasiswa');
 
-    // menampung semua gender dari API
-    var gender = [];
 
-    // $.get(_url,function (data) {
-    function renderPage(data) {
-        $.each(data, function (key, items) {
-            // untuk menampung gender sementara pd loop
-            _gend = items.gender;
+form.addEventListener('submit',tambahBaris);
 
-            // untuk memasukkan data ke result dari API
-            result += 
-                '<div class="col-sm-4 padding-sedikit wow fadeIn">' +
-                    '<div class="card padding-sedikit">' +
-                        '<p><b>' + items.name + '</b></p>' +
-                        '<p>' + _gend + '</p>' +
-                    '</div>'+
-                '</div>';
-
-            // jika gender tidak ada didalam array gender,
-            // maka masukkan gender opt
-            if ($.inArray(_gend, gender) === -1) {
-                // data gender di push untuk
-                // pengecekan itrasi berikutnya
-                gender.push(_gend);
-                // set gender_opt dgn <option>
-                gender_opt += '<option value="' + _gend +
-                    '">' + _gend + '</option>'
-            }
-        });
-
-        // menggunakan selector ID mhs-list,
-        // kemudian replace html di dalam komponen yang
-        // ada di id mhs-list menjadi result
-        $('#mhs-list').html(result);
-
-        // menggunakan selector ID gender-select,
-        // kemudian replace html di dalam komponen yang
-        // ada di id gender-select menjadi gender_opt
-        $('#gender-select').html('<option value="semua">semua</option>' + gender_opt);
-        // });
+function tambahBaris(e){
+    if(tabel.rows.namedItem(nim.value)){
+        alert('Error : NIM sudah terdaftar');
+        e.preventDefault();
+        return;
     }
 
-    var networkDataReceive = false;
-    /* cek di Cache, apakah sudah ada belum, ngambil data dari service online */
-    var networkUpdate = fetch(_url).then(function (response) {
-        return response.json();
-    }).then(function (data) {
-        networkDataReceive = true;
-        renderPage(data)
-    });
-    
-    /*fetch data dari cache*/
-    caches.match(_url).then(function (response) {
-        if (!response) throw Error("no data on cache");
-        return response.json();
-    }).then(function (data) {
-        if (!networkDataReceive){
-            renderPage(data);
-            console.log('render data from cache');
-        }
-    }).catch(function () {
-        return networkUpdate;
-    })
-
-
-    // filter untuk option gender
-    $('#gender-select').on('change', function () {
-        updateList($(this).val());
+    tambahKeDatabase({
+        nim : nim.value,
+        nama : nama.value,
+        gender : gender.value
     });
 
-    function updateList(opt) {
-        var _url2 = _url;
+    var baris = tabel.insertRow();
+        baris.insertCell().appendChild(document.createTextNode(nim.value));
+        baris.insertCell().appendChild(document.createTextNode(nama.value));
+        baris.insertCell().appendChild(document.createTextNode(gender.value));
 
-        if (opt !== 'semua'){
-            _url2 = _url + '?gender='+opt;
-        }
-        // menampung data yang didapat dari API
-        var result = '';
+    var tombolHapus = document.createElement('input');
+    tombolHapus.type = 'button';
+    tombolHapus.value = 'Delete';
+    tombolHapus.id = nim.value;
+    baris.insertCell().appendChild(tombolHapus);
+    e.preventDefault();
+}
 
-        $.get(_url2,function (data) {
-            $.each(data, function (key, items) {
-                // untuk menampung gender sementara pd loop
-                _gend = items.gender;
+function tambahKeDatabase(mahasiswa){
+    var objectStore = buatTransaksi().objectStore('mahasiswa');
+    var request = objectStore.add(mahasiswa);
+    request.onerror = handleError;
+    request.onsucces = console.log('mahasiswa [' + mahasiswa.nim + '] berhasil ditambahkan');
+}
 
-                // untuk memasukkan data ke result dari API
-                result += 
-                            '<div class="col-sm-4 padding-sedikit wow fadeIn">' +
-                                '<div class="card padding-sedikit">' +
-                                    '<p><b>' + items.name + '</b></p>' +
-                                    '<p>' + _gend + '</p>' +
-                                '</div>'+
-                            '</div>';
-            });
-
-            // update list
-            $('#mhs-list').html(result);
-        });
-    }
-
-    Notification.requestPermission(function(status){
-        console.log('Notification permissiln status ..',status);
-    });
-
-    function displayNotification(){
-        if(Notification.permission === 'granted'){
-        console.log("wwwwwww");
-
-            navigator.serviceWorker.getRegistration()
-            .then(function(reg){
-                var opt = {
-                    body : 'Welcome to Monster University :)',
-                    icon : 'images/logo-monster.png',
-                    vibrate : [100,50,100],
-                    data : {
-                        dateOfArrival : Date.now(),
-                        primaryKey : 1
-                    },
-                    actions : [
-                        {action : 'google.com', title : 'Hai !'},
-                        {action : 'close', title : 'Close'}
-                    ]
-                };
-                reg.showNotification('Monster University',opt);
-            })
-        }
-    }
-    
-    $('#notification').on('click', function(){
-        console.log('www');
-        displayNotification();
-    })
-});
-
-
-
-//Service Worker
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('/serviceworker.js').then(function(registration) {
-        // Registration was successful
-        console.log('ServiceWorker registration successful with scope: ', registration.scope);
-      }, function(err) {
-        // registration failed :(
-        console.log('ServiceWorker registration failed: ', err);
-      });
-    });
-  }
+function buatTransaksi(){
+    var transaction = db.transaction(['mahasiswa'],'readwrite');
+    transaction.onerror = handleError;
+    transaction.oncomplete = console.log('transaksi baru done');
+}
