@@ -100,19 +100,18 @@ function bacaDariDB(){
             console.log('Membaca ['+result.value.nim+'] dari DB');
             var baris = tabel.insertRow();
             baris.id = nim.value;
-            baris.insertCell().appendChild(document.createTextNode(nim.value));
-            baris.insertCell().appendChild(document.createTextNode(nama.value));
-            baris.insertCell().appendChild(document.createTextNode(gender.value));
+            baris.insertCell().appendChild(document.createTextNode(result.value.nim));
+            baris.insertCell().appendChild(document.createTextNode(result.value.nama));
+            baris.insertCell().appendChild(document.createTextNode(result.value.gender));
 
         //// tambah tombol hapus
             var btn = document.createElement('input');
             btn.type = 'button';
             btn.value = 'Hapus';
-            btn.id = result.nim.value;
+            btn.id = result.value.nim;
             btn.className= ' btn btn-sm btn-danger';
             baris.insertCell().appendChild(btn);
             result.continue();
-
             }
 
         }
